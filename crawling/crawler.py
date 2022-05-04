@@ -66,36 +66,26 @@ class BookDBUpdater:
             codes = codes.append({'code':li.attrs['href'].split('=')[1], 'name': li.text}, ignore_index=True)
         
         #save to csv
-        codes.to_csv('codes.csv', encoding='utf-8', index=False)
+        codes.to_csv('data/codes.csv', encoding='utf-8', index=False)
 
     def getBookURL(self): 
 
-        if os.path.exists('bookInfo.csv'): # bookinfo.csv라는 파일이 있으면 그 파일을 읽어온다
-            booksinfo = pd.read_csv('bookInfo.csv')
+        if os.path.exists('data/bookInfo.csv'): # bookinfo.csv라는 파일이 있으면 그 파일을 읽어온다
+            booksinfo = pd.read_csv('data/bookInfo.csv')
         else:
             booksinfo = pd.DataFrame(columns= ['isbn13', 'title', 'sub-title', 'authors', 'translator', 'publisher', 'date', 'original_title', 'price', 'pages', 'aladin_url','keywords'])
 
-        df = pd.read_csv('codes.csv')
+        df = pd.read_csv('data/codes.csv')
         codes=df['code']
         names=df['name']
 
         for code, name in zip(codes, names):
-<<<<<<< HEAD
-
-            print(f"Now=> {name} : {code}")
-            url = f'https://www.aladin.co.kr/shop/wbrowse.aspx?BrowseTarget=List&ViewRowsCount=100&ViewType=Detail&PublishMonth={diff}&SortOrder=5&page=1&Stockstatus=1&CID={code}&SearchOption=&CustReviewRankStart=&CustReviewRankEnd=&CustReviewCountStart=&CustReviewCountEnd=&PriceFilterMin=&PriceFilterMax='
-            driver.get(url)
-            end_num = driver.find_element(by=By.XPATH, value='//*[@id="short"]/div[12]/a')
-            end_num.get_attribute('href')
-            end_num = int(re.sub('[^0-9]', '', end_num.get_attribute('href')))
-=======
             # category code를 순회하며 데이터를 수집함
->>>>>>> ff4c5d91946137745d0a65fba8353be40f2c7413
 
             print(f"Now=> {name} : {code}")
             
             # 책 발행 연도를 제한하기 위한 코드. 현재부터 제한연도까지 차이만큼 월수를 구함
-            with open('config.json', 'r') as file:
+            with open('config/config.json', 'r') as file:
                 config = json.load(file)
             try:
                 #code : updateDate가 있으면 그 날짜를 기준으로
