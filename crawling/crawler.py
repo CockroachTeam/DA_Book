@@ -143,32 +143,46 @@ class BookDBUpdater:
 
 
     def getBookInfo(self, url):
+        
         #
 
         self.driver.get(url)
         #title
-        title = self.driver.find_element(by=By.XPATH, value='//*[@id="Ere_prod_allwrap"]/div[3]/div[2]/div[1]/div/ul/li[2]/div/a[1]').text
-        #sub_title
-        sub_title = self.driver.find_elements(by=By.XPATH, value='//*[@id="Ere_prod_allwrap"]/div[3]/div[2]/div[1]/div/ul/li[2]/div/span')
+        title = self.driver.find_element(by=By.XPATH, value='//a[@class="Ere_bo_title"]').text
+        #sub_title                                             
+        sub_title = self.driver.find_elements(by=By.XPATH, value='//span[@class="Ere_sub1_title"]')
         sub_title = sub_title[0].text if sub_title else None
         #isbn 
-        isbn = self.driver.find_elements(by=By.XPATH , value='//*[@id="Ere_prod_allwrap"]/div[9]/div[1]/div[3]/div[1]/ul/li')
-        isbn = isbn[-1].text.split(' : ')[-1]            
-        #categories
-        categories = self.driver.find_elements(by=By.XPATH, value='//*[@id="ulCategory"]/li')
-        categories = [category.text.split(' > ')[-1] for category in categories]
-        #introduction
+        isbn = self.driver.find_elements(by=By.XPATH , value='//div[@class="conts_info_list1"]')
+        isbn = isbn[-1].text.split(' : ')[-1]
+        isbn = int(re.sub('[^0-9]{13}', '', isbn))
+        #categories 
+        # 카테고리 중 마지막만 사용한다.
+        categories = self.driver.find_elements(by=By.XPATH, value='//ul[@class="ulCategory"]/li')
+        categories = list(set([category.text.split(' > ')[-1] for category in categories]))
         
+        #introduction => 따로 저장, 책에 대한 텍스트 정보들을 모두 수집해야 함
+        #이 데이터를 text 분석해서 유사도를 구하는 작업을 할 예정
+        #introduction = 
+
         # 아래 정보는 교보문고를 통해 수집
         #author, translator, publisher, date, original_title, keyword, page
         kyobo_url = f'http://www.kyobobook.co.kr/product/detailViewKor.laf?mallGb=KOR&ejkGb=KOR&barcode={isbn}'
         self.driver.get(kyobo_url)
 
         #get author+author_code, translator+translator_code, publisher, date
-        # info = driver.find_elements(by=By.XPATH, value='//*[@id="container"]/div[2]/form/div[1]/div[@class="author"]')
-        # info = info[0].text.split(' | ')
+        names = self.driver.find_elements(by=By.XPATH, value='//a[@class="detail_author"]')
+        author = [name.text for name in names]
+       
+        translator = self.driver.find_elements(by=By.XPATH, value='//a[@class="detail_translator"]')
+        translator = translator[0].text if translator else None
+       
+        publisher = self.driver.find_element(by=By.XPATH, value='//span[@title="출판사"]').text
+       
+        date = self.driver.find_elements(by=By.XPATH, value='//span[@class="date"]')
+        date = re.sub("")
 
-        return #list
+        return #list, introduction
 
 
 class ReviewUpdator():
