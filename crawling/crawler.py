@@ -122,7 +122,10 @@ class BookDBUpdater:
 
                             #book_date와 config 날짜를 비교해서 더 과거면 continue
 
-                            info = self.getBookInfo(url)
+                            info = self.getBookInfo_aladin(url)
+                            if info is None:
+                                continue
+
                             booksinfo.loc[len(booksinfo)] = info
                             
                             config[code] = book_date
@@ -142,9 +145,23 @@ class BookDBUpdater:
         return booksinfo
 
 
-    def getBookInfo(self, url):
+    def getBookInfo_aladin(self, url, update_date):
+        # 이 함수는 알라딘에서 데이터를 수집한다. 수집한 데이터 중 isbn으로 kyobo web으로 접근한다.
+        '''
+        수집 데이터:
+        title, sub_title, isbn, categories, date
+        '''
+        dict = {}
+        date = self.driver.find_element(by=By.XPATH, value='//li[@class="Ere_sub2_title"]').text
+        date_pattern = r"\d{4}-\s\d{1,2}-\s\d{1,2}"
+        # date_group = r"(\d{4})년\s(\d{1,2})월\s(\d{1,2})일"
+        # to_change = r"\1.\2.\3"
+        date = re.findall(date_pattern, date)[0]
+        # date = re.sub(date_group, to_change, date)
         
-        #
+        if update_date > date:
+            #이 책의 출간일이 최종 Update 날짜보다 과거라면 함수 종료
+            return None
 
         self.driver.get(url)
         #title
@@ -161,33 +178,37 @@ class BookDBUpdater:
         categories = self.driver.find_elements(by=By.XPATH, value='//ul[@class="ulCategory"]/li')
         categories = list(set([category.text.split(' > ')[-1] for category in categories]))
         
-        #introduction => 따로 저장, 책에 대한 텍스트 정보들을 모두 수집해야 함
-        #이 데이터를 text 분석해서 유사도를 구하는 작업을 할 예정
-        #introduction = 
+        
+        dict_kyobo, introduction = self.getBookInfo_kyobo(isbn)
+        dict.update(dict_kyobo)
 
+        return #dict, introduction
+    
+    def getBookInfo_kyobo(self, isbn):
+        
         # 아래 정보는 교보문고를 통해 수집
-        #author, translator, publisher, date, original_title, keyword, page
+        '''
+        수집 데이터
+        author, translator, publisher, original_title, keyword, page
+        '''
+        dict = {}
         kyobo_url = f'http://www.kyobobook.co.kr/product/detailViewKor.laf?mallGb=KOR&ejkGb=KOR&barcode={isbn}'
         self.driver.get(kyobo_url)
 
         #get author+author_code, translator+translator_code, publisher, date
         names = self.driver.find_elements(by=By.XPATH, value='//a[@class="detail_author"]')
-        author = [name.text for name in names]
+        dict["author"] = [name.text for name in names]
        
         translator = self.driver.find_elements(by=By.XPATH, value='//a[@class="detail_translator"]')
-        translator = translator[0].text if translator else None
+        dict["translator"] = translator[0].text if translator else None
        
-        publisher = self.driver.find_element(by=By.XPATH, value='//span[@title="출판사"]').text
+        dict["publisher"] = self.driver.find_element(by=By.XPATH, value='//span[@title="출판사"]').text
        
-        #date는 알라딘에서 구하고, 알라딘에 진입시 날짜를 수집해서 업데이트 여부를 비교하는게 어떨까?
-        date = self.driver.find_element(by=By.XPATH, value='//span[@class="date"]').text
-        date_pattern = r"\d{4}년\s\d{1,2}월\s\d{1,2}일"
-        date_group = r"(\d{4})년\s(\d{1,2})월\s(\d{1,2})일"
-        to_change = r"\1.\2.\3"
-        date = re.findall(date_pattern, date)[0]
-        date = re.sub(date_group, to_change, date)
-
-        return #list, introduction
+        #introduction => 따로 저장, 책에 대한 텍스트 정보들을 모두 수집해야 함
+        #이 데이터를 text 분석해서 유사도를 구하는 작업을 할 예정
+        #introduction = 
+        
+        return 
 
 
 class ReviewUpdator():
