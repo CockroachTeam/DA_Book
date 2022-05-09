@@ -179,8 +179,13 @@ class BookDBUpdater:
        
         publisher = self.driver.find_element(by=By.XPATH, value='//span[@title="출판사"]').text
        
-        date = self.driver.find_elements(by=By.XPATH, value='//span[@class="date"]')
-        date = re.sub("")
+        #date는 알라딘에서 구하고, 알라딘에 진입시 날짜를 수집해서 업데이트 여부를 비교하는게 어떨까?
+        date = self.driver.find_element(by=By.XPATH, value='//span[@class="date"]').text
+        date_pattern = r"\d{4}년\s\d{1,2}월\s\d{1,2}일"
+        date_group = r"(\d{4})년\s(\d{1,2})월\s(\d{1,2})일"
+        to_change = r"\1.\2.\3"
+        date = re.findall(date_pattern, date)[0]
+        date = re.sub(date_group, to_change, date)
 
         return #list, introduction
 
