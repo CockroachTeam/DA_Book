@@ -185,6 +185,7 @@ class BookDBUpdater:
         return #dict, introduction
     
     def getBookInfo_kyobo(self, isbn):
+
         
         # 아래 정보는 교보문고를 통해 수집
         '''
@@ -199,16 +200,46 @@ class BookDBUpdater:
         names = self.driver.find_elements(by=By.XPATH, value='//a[@class="detail_author"]')
         dict["author"] = [name.text for name in names]
        
-        translator = self.driver.find_elements(by=By.XPATH, value='//a[@class="detail_translator"]')
-        dict["translator"] = translator[0].text if translator else None
-       
+        author_numbers = []
+        for author_number in names:
+            author_number = author_number.get_attribute("onclick").split(';')[0]
+            author_number = int(re.sub('[^0-9]','', author_number.split(',')[-1]))
+            author_numbers.append(author_number)
+        dict["author_number"] = author_numbers
+
+        translators = self.driver.find_elements(by=By.XPATH, value='//a[@class="detail_translator"]')
+        dict["translator"] = [translator.text for translator in translators if translator]
+        
+        translator_numbers = []
+        for translator_number in translators:
+            translator_number = translator_number.get_attribute("onclick").split(';')[0]
+            translator_number = int(re.sub('[^0-9]','', translator_number.split(',')[-1]))
+            translator_numbers.append(translator_number)
+        dict["translator_number"] = translator_numbers
+
         dict["publisher"] = self.driver.find_element(by=By.XPATH, value='//span[@title="출판사"]').text
        
+        keywords = self.driver.find_elements(by=By.XPATH, value='//div[@class="tag_list]"')
+        keywords = [keyword.text for keyword in keywords]
+        dict["keywords"] = keywords
+
+        origin_title = self.driver.find_elements(by=By.XPATH, value='//*[@id="container"]/div[5]/div[1]/div[2]/table/tbody/tr[4]/td/a')
+        
+        if len(origin_title) > 0 :
+            origin_title = origin_title[0].text if origin_title else None
+            origin_title = origin_title.split('/')[0] 
+            dict["origin_title"] = origin_title
+        else:
+            dict["origin_title"] = None
+
+        page = self.driver.find_element(by=By.XPATH, value='//*[@id="container"]/div[5]/div[1]/div[2]/table/tbody/tr[2]/td').text
+        dict["page"] = int(page)
+
         #introduction => 따로 저장, 책에 대한 텍스트 정보들을 모두 수집해야 함
         #이 데이터를 text 분석해서 유사도를 구하는 작업을 할 예정
-        #introduction = 
+        introduction = self.driver.find_element
         
-        return 
+        return dict
 
 
 class ReviewUpdator():
