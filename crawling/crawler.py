@@ -56,7 +56,7 @@ class BookDBUpdater:
         self.driver = webdriver.Chrome(os.path.join(os.getcwd(), 'chromedriver.exe'), chrome_options=self.chrome_options)
         self.driver.get("https://www.aladin.co.kr/home/wbookmain.aspx")
         html = self.driver.page_source
-        self.driver.quit()
+        
 
         soup = BeautifulSoup(html, 'html.parser')
         browse_sub_list = soup.select('li.browse_sub > a')
@@ -67,6 +67,7 @@ class BookDBUpdater:
         
         #save to csv
         codes.to_csv('data/codes.csv', encoding='utf-8', index=False)
+        self.driver.quit()
 
     def getBookURL(self): 
 
@@ -190,7 +191,7 @@ class BookDBUpdater:
         # 아래 정보는 교보문고를 통해 수집
         '''
         수집 데이터
-        author, translator, publisher, original_title, keyword, page
+        author, translator, publisher, original_title, keyword, page, introduction
         '''
         dict = {}
         kyobo_url = f'http://www.kyobobook.co.kr/product/detailViewKor.laf?mallGb=KOR&ejkGb=KOR&barcode={isbn}'
@@ -237,8 +238,14 @@ class BookDBUpdater:
 
         #introduction => 따로 저장, 책에 대한 텍스트 정보들을 모두 수집해야 함
         #이 데이터를 text 분석해서 유사도를 구하는 작업을 할 예정
-        introduction = self.driver.find_element
-        
+        # 아래 데이터는 검증이 필요함. 
+        introductions = self.driver.find_elements(by=By.XPATH, value='//*[@id="container"]/div[5]/div[1]/div[2]/div[@class="box_detail_article"]')
+        introduction = introductions[0].text
+        index = introductions[1].text
+
+        dict["introduction"] = introduction
+        dict["index"] = index
+
         return dict
 
 
