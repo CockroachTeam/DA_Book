@@ -6,6 +6,7 @@ import re
 from datetime import datetime 
 import time
 import json
+import argparse
 
 from bs4 import BeautifulSoup
 
@@ -166,24 +167,28 @@ class BookDBUpdater:
 
         self.driver.get(url)
         #title
-        title = self.driver.find_element(by=By.XPATH, value='//a[@class="Ere_bo_title"]').text
+        dict["title"] = self.driver.find_element(by=By.XPATH, value='//a[@class="Ere_bo_title"]').text
         #sub_title                                             
         sub_title = self.driver.find_elements(by=By.XPATH, value='//span[@class="Ere_sub1_title"]')
-        sub_title = sub_title[0].text if sub_title else None
+        dict["sub_title"] = sub_title[0].text if sub_title else None
         #isbn 
         isbn = self.driver.find_elements(by=By.XPATH , value='//div[@class="conts_info_list1"]')
         isbn = isbn[-1].text.split(' : ')[-1]
-        isbn = int(re.sub('[^0-9]{13}', '', isbn))
+        dict["isbn"] = int(re.sub('[^0-9]{13}', '', isbn))
         #categories 
         # 카테고리 중 마지막만 사용한다.
         categories = self.driver.find_elements(by=By.XPATH, value='//ul[@class="ulCategory"]/li')
-        categories = list(set([category.text.split(' > ')[-1] for category in categories]))
+        dict["categories"] = list(set([category.text.split(' > ')[-1] for category in categories]))
         
+        #aladin_review_point
+        aladin_review_point = self.driver.find_elements(by=By.XPATH, value='//*[@id="wa_product_top1_wa_Top_Ranking_pnlRanking"]/div[2]/a[2]')
+        dict["aladin_review_point"] = float(aladin_review_point[0].text) if aladin_review_point else 0.0
+
         
         dict_kyobo, introduction = self.getBookInfo_kyobo(isbn)
         dict.update(dict_kyobo)
 
-        return #dict, introduction
+        return dict, introduction
     
     def getBookInfo_kyobo(self, isbn):
 
@@ -194,6 +199,7 @@ class BookDBUpdater:
         author, translator, publisher, original_title, keyword, page, introduction
         '''
         dict = {}
+        dict_intro = {}
         kyobo_url = f'http://www.kyobobook.co.kr/product/detailViewKor.laf?mallGb=KOR&ejkGb=KOR&barcode={isbn}'
         self.driver.get(kyobo_url)
 
@@ -236,6 +242,13 @@ class BookDBUpdater:
         page = self.driver.find_element(by=By.XPATH, value='//*[@id="container"]/div[5]/div[1]/div[2]/table/tbody/tr[2]/td').text
         dict["page"] = int(page)
 
+        # kyobo 리뷰 점수
+        kyobo_review_point = self.driver.find_elements(by=By.XPATH, value='//div[@class="popup_load"]/em')
+        dict["kyobo_review_point"] = float(kyobo_review_point[0].text) if kyobo_review_point else 0.0
+
+        #kyobo review
+        # kyobo_review = 
+
         #introduction => 따로 저장, 책에 대한 텍스트 정보들을 모두 수집해야 함
         #이 데이터를 text 분석해서 유사도를 구하는 작업을 할 예정
         # 아래 데이터는 검증이 필요함. 
@@ -243,10 +256,10 @@ class BookDBUpdater:
         introduction = introductions[0].text
         index = introductions[1].text
 
-        dict["introduction"] = introduction
-        dict["index"] = index
+        dict_intro["introduction"] = introduction
+        dict_intro["index"] = index
 
-        return dict
+        return dict, dict_intro
 
 
 class ReviewUpdator():
@@ -255,5 +268,8 @@ class ReviewUpdator():
 
 
 if __name__ == "__main__":
+
+    #argparse 셋팅하기
+
     getbook = BookDBUpdater()
     getbook.getBookURL()
