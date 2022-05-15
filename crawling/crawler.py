@@ -37,13 +37,13 @@ class BookDBUpdater:
         
         user_agent = "user-agent=Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko"
         self.chrome_options = webdriver.ChromeOptions()
-        self.chrome_options.add_argument('--headless') #selenium 작동시 웹 페이지를 작동하지 않음
+        # self.chrome_options.add_argument('--headless') #selenium 작동시 웹 페이지를 작동하지 않음
         self.chrome_options.add_argument("--log-level=3") #log를 남가지 않음
         self.chrome_options.add_argument('user-agent=' + user_agent)
         self.driver = webdriver.Chrome(os.path.join(os.getcwd(), 'chromedriver'), chrome_options=self.chrome_options)
     
 
-    def makeDiffMonth(target_year, target_month):
+    def makeDiffMonth(self, target_year, target_month):
         # update시 code의 updateDate 정보를 받아 page_nation의 범위를 제한함.
         now_year = datetime.now().year 
         now_month = target_month
@@ -70,12 +70,12 @@ class BookDBUpdater:
         codes.to_csv('data/codes.csv', encoding='utf-8', index=False)
         self.driver.quit()
 
-    def getBookURL(self): 
+    def getBookData(self): 
 
         if os.path.exists('data/bookInfo.csv'): # bookinfo.csv라는 파일이 있으면 그 파일을 읽어온다
             booksinfo = pd.read_csv('data/bookInfo.csv')
         else:
-            booksinfo = pd.DataFrame(columns= ['isbn13', 'title', 'sub-title', 'authors', 'translator', 'publisher', 'date', 'original_title', 'price', 'pages', 'aladin_url','keywords'])
+            booksinfo = pd.DataFrame()
 
         df = pd.read_csv('data/codes.csv')
         codes=df['code']
@@ -87,22 +87,24 @@ class BookDBUpdater:
             print(f"Now=> {name} : {code}")
             
             # 책 발행 연도를 제한하기 위한 코드. 현재부터 제한연도까지 차이만큼 월수를 구함
-            with open('config/config.json', 'r') as file:
-                config = json.load(file)
-            try:
-                #code : updateDate가 있으면 그 날짜를 기준으로
-                date = config[code].split('.')
-                target_year = int(date[0])
-                target_month = int(date[1])
-                diff = self.makeDiffMonth(target_year, target_month)
-            except KeyError:
-                #없으면 2010년이 기준
-                diff = self.makeDiffMonth(2010, 1)
+            # with open('config/config.json', 'r') as file:
+            #     config = json.load(file)
+            # try:
+            #     #code : updateDate가 있으면 그 날짜를 기준으로
+            #     date = config[code].split('.')
+            #     target_year = int(date[0])
+            #     target_month = int(date[1])
+            #     diff = self.makeDiffMonth(target_year, target_month)
+            # except KeyError:
+            #     #없으면 2010년이 기준
+            #     diff = self.makeDiffMonth(2010, 1)
+            
+            diff = self.makeDiffMonth(2010, 1)
 
             self.driver.get(f'https://www.aladin.co.kr/shop/wbrowse.aspx?BrowseTarget=List&ViewRowsCount=200&ViewType=Detail&PublishMonth={diff}&SortOrder=5&page=1&Stockstatus=1&CID={code}&SearchOption=&CustReviewRankStart=&CustReviewRankEnd=&CustReviewCountStart=&CustReviewCountEnd=&PriceFilterMin=&PriceFilterMax=')
             
             # page_nation의 끝 번호를 구한다.
-            end_num = self.driver.find_element(by=By.XPATH, value='//*[@id="short"]/div[12]/a')
+            end_num = self.driver.find_element(by=By.XPATH, value='//div[@class="numbox_last"]/a')
             end_num.get_attribute('href')
             end_num = int(re.sub('[^0-9]', '', end_num.get_attribute('href'))) 
 
@@ -112,29 +114,40 @@ class BookDBUpdater:
                     self.driver.get(url)
                     self.driver.implicitly_wait(2) #페이지가 열릴 때 까지 2초를 기다림.
                     book_list = self.driver.find_elements(by=By.XPATH, value="//div[@class='ss_book_box']/table/tbody/tr/td[2]/table/tbody/tr[1]/td/div/a")
-                    book_dates = self.driver.find_elements(by=By.XPATH, value='//div[@class="ss_book_list"]/ul')
+                    # book_dates = self.driver.find_elements(by=By.XPATH, value='//div[@class="ss_book_list"]/ul')
 
                     if len(book_list) >0 :
-                        for url, book_date in zip(book_list, book_dates): 
+                        # for url, book_date in zip(book_list, book_dates): 
+                        for url in book_list:
                             # book list를 돌면서 url을 수집한뒤 getBookInfo에 보냄
                             url = url.get_attribute('href')
+                            
                             # 현재 책의 출간 날짜를 구함.
-                            book_date = re.findall("[0-9]{4}년 [0-9]{1,2}월", book_date)[0]
-                            book_date = re.sub('년','.', book_date).rstrip('월')
+                            # book_date = re.findall("[0-9]{4}년 [0-9]{1,2}월", book_date)[0]
+                            # book_date = re.sub('년','.', book_date).rstrip('월')
 
                             #book_date와 config 날짜를 비교해서 더 과거면 continue
+                            # if url in booksinfo['aladin_url']:
+                            #     continue
 
-                            info = self.getBookInfo_aladin(url)
+                            info, intro = self.getBookInfo_aladin(url)
+                            print(info)
+                            print(type(info))
                             if info is None:
                                 continue
+                            info["aladin_url"] = url
 
-                            booksinfo.loc[len(booksinfo)] = info
-                            
-                            config[code] = book_date
+                            booksinfo = booksinfo.append(info)
+                            booksintro = booksintro.append(intro)
+
+
+                    booksinfo.to_csv('data/bookInfo.csv', mode='a', encoding='utf-8')
+                    booksintro.to_csv('data/boonIntro.csv', mode='a', encoding='utf-8')
 
                     #진행 사항을 보여주는 progress bar
                     printProgress(page, end_num, 'Progress:', 'Complete', 1, 50)
-
+                
+                
                 except TimeoutException:
                     print("\nOps! TimeOut!")
                     continue
@@ -144,26 +157,27 @@ class BookDBUpdater:
                     self.driver.quit()
                     self.driver = webdriver.Chrome(os.path.join(os.getcwd(), 'chromedriver.exe'), chrome_options=self.chrome_options)
         self.driver.quit()
-        return booksinfo
+        
 
 
-    def getBookInfo_aladin(self, url, update_date):
+    def getBookInfo_aladin(self, url, update_date=None):
         # 이 함수는 알라딘에서 데이터를 수집한다. 수집한 데이터 중 isbn으로 kyobo web으로 접근한다.
         '''
         수집 데이터:
         title, sub_title, isbn, categories, date
         '''
+        self.driver.get(url)
         dict = {}
         date = self.driver.find_element(by=By.XPATH, value='//li[@class="Ere_sub2_title"]').text
-        date_pattern = r"\d{4}-\s\d{1,2}-\s\d{1,2}"
+        date_pattern = r"\d{4}-\d{2}-\d{2}"
         # date_group = r"(\d{4})년\s(\d{1,2})월\s(\d{1,2})일"
         # to_change = r"\1.\2.\3"
-        date = re.findall(date_pattern, date)[0]
+        dict["date"] = re.findall(date_pattern, date)[0]
         # date = re.sub(date_group, to_change, date)
         
-        if update_date > date:
-            #이 책의 출간일이 최종 Update 날짜보다 과거라면 함수 종료
-            return None
+        # if update_date > date:
+        #     #이 책의 출간일이 최종 Update 날짜보다 과거라면 함수 종료
+        #     return None
 
         self.driver.get(url)
         #title
@@ -174,16 +188,11 @@ class BookDBUpdater:
         #isbn 
         isbn = self.driver.find_elements(by=By.XPATH , value='//div[@class="conts_info_list1"]')
         isbn = isbn[-1].text.split(' : ')[-1]
-        dict["isbn"] = int(re.sub('[^0-9]{13}', '', isbn))
+        dict["isbn13"] = int(re.sub('[^0-9]{13}', '', isbn))
         #categories 
         # 카테고리 중 마지막만 사용한다.
         categories = self.driver.find_elements(by=By.XPATH, value='//ul[@class="ulCategory"]/li')
         dict["categories"] = list(set([category.text.split(' > ')[-1] for category in categories]))
-        
-        #aladin_review_point
-        aladin_review_point = self.driver.find_elements(by=By.XPATH, value='//*[@id="wa_product_top1_wa_Top_Ranking_pnlRanking"]/div[2]/a[2]')
-        dict["aladin_review_point"] = float(aladin_review_point[0].text) if aladin_review_point else 0.0
-
         
         dict_kyobo, introduction = self.getBookInfo_kyobo(isbn)
         dict.update(dict_kyobo)
@@ -208,28 +217,38 @@ class BookDBUpdater:
         dict["author"] = [name.text for name in names]
        
         author_numbers = []
-        for author_number in names:
-            author_number = author_number.get_attribute("onclick").split(';')[0]
-            author_number = int(re.sub('[^0-9]','', author_number.split(',')[-1]))
-            author_numbers.append(author_number)
-        dict["author_number"] = author_numbers
+        try:
+            for author_number in names:
+                author_number = author_number.get_attribute("onclick").split(';')[0]
+                author_number = author_number.split(',')[-1]
+                author_number = int(re.sub('[^0-9]','', author_number))
+                author_numbers.append(author_number)
+            dict["author_number"] = author_numbers
+        except ValueError:
+            dict["author_number"] = None
 
         translators = self.driver.find_elements(by=By.XPATH, value='//a[@class="detail_translator"]')
         dict["translator"] = [translator.text for translator in translators if translator]
         
-        translator_numbers = []
-        for translator_number in translators:
-            translator_number = translator_number.get_attribute("onclick").split(';')[0]
-            translator_number = int(re.sub('[^0-9]','', translator_number.split(',')[-1]))
-            translator_numbers.append(translator_number)
-        dict["translator_number"] = translator_numbers
+        try:
+            translator_numbers = []
+            for translator_number in translators:
+                translator_number = translator_number.get_attribute("onclick").split(';')[0]
+                translator_number = int(re.sub('[^0-9]','', translator_number.split(',')[-1]))
+                translator_numbers.append(translator_number)
+            dict["translator_number"] = translator_numbers
+        except ValueError:
+            dict["translator_number"] = None
 
         dict["publisher"] = self.driver.find_element(by=By.XPATH, value='//span[@title="출판사"]').text
        
-        keywords = self.driver.find_elements(by=By.XPATH, value='//div[@class="tag_list]"')
-        keywords = [keyword.text for keyword in keywords]
-        dict["keywords"] = keywords
-
+        keywords = self.driver.find_elements(by=By.XPATH, value='//div[@class="tag_list"]')
+        if len(keywords) > 0:
+            keywords = [keyword.text for keyword in keywords]
+            dict["keywords"] = keywords
+        else:
+            dict["keywords"] = None
+            
         origin_title = self.driver.find_elements(by=By.XPATH, value='//*[@id="container"]/div[5]/div[1]/div[2]/table/tbody/tr[4]/td/a')
         
         if len(origin_title) > 0 :
@@ -240,14 +259,9 @@ class BookDBUpdater:
             dict["origin_title"] = None
 
         page = self.driver.find_element(by=By.XPATH, value='//*[@id="container"]/div[5]/div[1]/div[2]/table/tbody/tr[2]/td').text
-        dict["page"] = int(page)
+        dict["page"] = int(page.rstrip('쪽'))
 
-        # kyobo 리뷰 점수
-        kyobo_review_point = self.driver.find_elements(by=By.XPATH, value='//div[@class="popup_load"]/em')
-        dict["kyobo_review_point"] = float(kyobo_review_point[0].text) if kyobo_review_point else 0.0
-
-        #kyobo review
-        # kyobo_review = 
+        
 
         #introduction => 따로 저장, 책에 대한 텍스트 정보들을 모두 수집해야 함
         #이 데이터를 text 분석해서 유사도를 구하는 작업을 할 예정
@@ -266,10 +280,23 @@ class ReviewUpdator():
     def __init__():
         pass
 
+    def getReviews(self):
+        # kyobo 리뷰 점수
+        kyobo_review_point = self.driver.find_elements(by=By.XPATH, value='//div[@class="popup_load"]/em')
+        dict["kyobo_review_point"] = float(kyobo_review_point[0].text) if kyobo_review_point else 0.0
+
+        #kyobo review
+        # kyobo_review = 
+
+        #aladin_review_point
+        aladin_review_point = self.driver.find_elements(by=By.XPATH, value='//*[@id="wa_product_top1_wa_Top_Ranking_pnlRanking"]/div[2]/a[2]')
+        dict["aladin_review_point"] = float(aladin_review_point[0].text) if aladin_review_point else 0.0
+
+
 
 if __name__ == "__main__":
 
     #argparse 셋팅하기
 
     getbook = BookDBUpdater()
-    getbook.getBookURL()
+    getbook.getBookData()
