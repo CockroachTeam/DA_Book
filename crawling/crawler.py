@@ -74,8 +74,10 @@ class BookDBUpdater:
 
         if os.path.exists('data/bookInfo.csv'): # bookinfo.csv라는 파일이 있으면 그 파일을 읽어온다
             booksinfo = pd.read_csv('data/bookInfo.csv')
+            booksintro = pd.read_csv('data/bookIntro.csv')
         else:
             booksinfo = pd.DataFrame()
+            booksintro = pd.DataFrame()
 
         df = pd.read_csv('data/codes.csv')
         codes=df['code']
@@ -136,6 +138,9 @@ class BookDBUpdater:
                             if info is None:
                                 continue
                             info["aladin_url"] = url
+
+                            info = pd.DataFrame(data=info)
+                            intro = pd.DataFrame(data=intro)
 
                             booksinfo = booksinfo.append(info)
                             booksintro = booksintro.append(intro)
@@ -241,7 +246,7 @@ class BookDBUpdater:
             dict["translator_number"] = None
 
         dict["publisher"] = self.driver.find_element(by=By.XPATH, value='//span[@title="출판사"]').text
-       
+        
         keywords = self.driver.find_elements(by=By.XPATH, value='//div[@class="tag_list"]')
         if len(keywords) > 0:
             keywords = [keyword.text for keyword in keywords]
