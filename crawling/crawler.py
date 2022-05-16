@@ -197,8 +197,9 @@ class BookDBUpdater:
         #categories 
         # 카테고리 중 마지막만 사용한다.
         categories = self.driver.find_elements(by=By.XPATH, value='//ul[@class="ulCategory"]/li')
-        dict["categories"] = list(set([category.text.split(' > ')[-1] for category in categories]))
-        
+        categories = list(set([category.text.split(' > ')[-1] for category in categories]))
+        dict["categories"] = '/'.join(categories)
+
         dict_kyobo, introduction = self.getBookInfo_kyobo(isbn)
         dict.update(dict_kyobo)
 
@@ -219,29 +220,41 @@ class BookDBUpdater:
 
         #get author+author_code, translator+translator_code, publisher, date
         names = self.driver.find_elements(by=By.XPATH, value='//a[@class="detail_author"]')
-        dict["author"] = [name.text for name in names]
-       
-        author_numbers = []
+        names = [name.text for name in names]
+        if len(names) > 1:
+            dict["author"] = ','.joint(names)
+        else:
+            dict["author"] = names[0]
+
         try:
             for author_number in names:
                 author_number = author_number.get_attribute("onclick").split(';')[0]
                 author_number = author_number.split(',')[-1]
-                author_number = int(re.sub('[^0-9]','', author_number))
-                author_numbers.append(author_number)
-            dict["author_number"] = author_numbers
+                author_number = re.sub('[^0-9]','', author_number)
+            dict["author_number"] = ','.join(author_number)
         except ValueError:
             dict["author_number"] = None
 
         translators = self.driver.find_elements(by=By.XPATH, value='//a[@class="detail_translator"]')
-        dict["translator"] = [translator.text for translator in translators if translator]
-        
+        translators = [translator.text for translator in translators if translator]
+        if len(translators) > 1:
+            dict["translator"] = ','.join(translators)
+        elif len(translators) == 1:
+            dict["translator"] = translators[0]
+        else:
+            dict["translator"] = None
+
         try:
-            translator_numbers = []
             for translator_number in translators:
                 translator_number = translator_number.get_attribute("onclick").split(';')[0]
-                translator_number = int(re.sub('[^0-9]','', translator_number.split(',')[-1]))
-                translator_numbers.append(translator_number)
-            dict["translator_number"] = translator_numbers
+                translator_number = re.sub('[^0-9]','', translator_number.split(',')[-1])
+                if len(translator_number) > 1:
+                    dict["translator_number"] = ','.join(translator_number)
+                elif len(translator_number) == 1:
+                    dict["translator_number"] = translator_number[0]
+                else:
+                    dict["translator_number"] = None
+
         except ValueError:
             dict["translator_number"] = None
 
