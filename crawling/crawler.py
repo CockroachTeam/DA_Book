@@ -112,17 +112,19 @@ class BookDBUpdater:
 
             for page in range(end_num,0, -1): #오래된 책 데이터부터 수집한다.
                 try:
-                    url = f'https://www.aladin.co.kr/shop/wbrowse.aspx?BrowseTarget=List&ViewRowsCount=200&ViewType=Detail&PublishMonth={diff}&SortOrder=5&page={page}&Stockstatus=1&CID={code}&SearchOption=&CustReviewRankStart=&CustReviewRankEnd=&CustReviewCountStart=&CustReviewCountEnd=&PriceFilterMin=&PriceFilterMax='
-                    self.driver.get(url)
+                    page_url = f'https://www.aladin.co.kr/shop/wbrowse.aspx?BrowseTarget=List&ViewRowsCount=200&ViewType=Detail&PublishMonth={diff}&SortOrder=5&page={page}&Stockstatus=1&CID={code}&SearchOption=&CustReviewRankStart=&CustReviewRankEnd=&CustReviewCountStart=&CustReviewCountEnd=&PriceFilterMin=&PriceFilterMax='
+                    self.driver.get(page_url)
                     self.driver.implicitly_wait(2) #페이지가 열릴 때 까지 2초를 기다림.
-                    book_list = self.driver.find_elements(by=By.XPATH, value="//div[@class='ss_book_box']/table/tbody/tr/td[2]/table/tbody/tr[1]/td/div/a")
+                    book_list = self.driver.find_elements(by=By.XPATH, value="//div[@class='cover_area']/a")
                     # book_dates = self.driver.find_elements(by=By.XPATH, value='//div[@class="ss_book_list"]/ul')
-
+                    print(book_list)
                     if len(book_list) >0 :
                         # for url, book_date in zip(book_list, book_dates): 
-                        for url in book_list:
+                        for list in book_list:
+                            if self.driver.current_url is not page_url:
+                                self.driver.get(page_url)
                             # book list를 돌면서 url을 수집한뒤 getBookInfo에 보냄
-                            url = url.get_attribute('href')
+                            url = list.get_attribute('href')
                             
                             # 현재 책의 출간 날짜를 구함.
                             # book_date = re.findall("[0-9]{4}년 [0-9]{1,2}월", book_date)[0]
@@ -134,21 +136,18 @@ class BookDBUpdater:
 
                             info, intro = self.getBookInfo_aladin(url)
                             print(info)
-                            print(type(info))
                             if info is None:
                                 continue
                             info["aladin_url"] = url
 
-                            info = pd.DataFrame(data=info)
-                            intro = pd.DataFrame(data=intro)
+                            info = pd.DataFrame.from_dict([info])
+                            intro = pd.DataFrame.from_dict([intro])
 
                             booksinfo = booksinfo.append(info)
                             booksintro = booksintro.append(intro)
 
 
-                    booksinfo.to_csv('data/bookInfo.csv', mode='a', encoding='utf-8')
-                    booksintro.to_csv('data/boonIntro.csv', mode='a', encoding='utf-8')
-
+                    
                     #진행 사항을 보여주는 progress bar
                     printProgress(page, end_num, 'Progress:', 'Complete', 1, 50)
                 
@@ -161,6 +160,9 @@ class BookDBUpdater:
                     print("\nOps! NosuchWindow! So, restart!")
                     self.driver.quit()
                     self.driver = webdriver.Chrome(os.path.join(os.getcwd(), 'chromedriver.exe'), chrome_options=self.chrome_options)
+        booksinfo.to_csv('data/bookInfo.csv', mode='a', encoding='utf-8')
+        booksintro.to_csv('data/boonIntro.csv', mode='a', encoding='utf-8')
+        
         self.driver.quit()
         
 
@@ -198,7 +200,10 @@ class BookDBUpdater:
         # 카테고리 중 마지막만 사용한다.
         categories = self.driver.find_elements(by=By.XPATH, value='//ul[@class="ulCategory"]/li')
         categories = list(set([category.text.split(' > ')[-1] for category in categories]))
-        dict["categories"] = '/'.join(categories)
+        if len(categories) > 1:
+            dict["categories"] = '/'.join(categories)
+        else:
+            dict["categories"] = None
 
         dict_kyobo, introduction = self.getBookInfo_kyobo(isbn)
         dict.update(dict_kyobo)
@@ -219,19 +224,25 @@ class BookDBUpdater:
         self.driver.get(kyobo_url)
 
         #get author+author_code, translator+translator_code, publisher, date
-        names = self.driver.find_elements(by=By.XPATH, value='//a[@class="detail_author"]')
-        names = [name.text for name in names]
+        names_elements = self.driver.find_elements(by=By.XPATH, value='//a[@class="detail_author"]')
+        names = [name.text for name in names_elements]
         if len(names) > 1:
             dict["author"] = ','.joint(names)
         else:
             dict["author"] = names[0]
 
         try:
-            for author_number in names:
+            for author_number in names_elements:
                 author_number = author_number.get_attribute("onclick").split(';')[0]
                 author_number = author_number.split(',')[-1]
                 author_number = re.sub('[^0-9]','', author_number)
-            dict["author_number"] = ','.join(author_number)
+            if len(author_number) > 1:
+                dict["author_number"] = ','.join(author_number)
+            elif len(author_number) == 1:
+                dict["author_number"] = author_number[0]
+            else:
+                dict["author_number"] = None
+
         except ValueError:
             dict["author_number"] = None
 
