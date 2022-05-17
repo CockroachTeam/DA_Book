@@ -113,17 +113,19 @@ class BookDBUpdater:
             for page in range(end_num,0, -1): #오래된 책 데이터부터 수집한다.
                 try:
                     page_url = f'https://www.aladin.co.kr/shop/wbrowse.aspx?BrowseTarget=List&ViewRowsCount=200&ViewType=Detail&PublishMonth={diff}&SortOrder=5&page={page}&Stockstatus=1&CID={code}&SearchOption=&CustReviewRankStart=&CustReviewRankEnd=&CustReviewCountStart=&CustReviewCountEnd=&PriceFilterMin=&PriceFilterMax='
+                                 
                     self.driver.get(page_url)
                     self.driver.implicitly_wait(2) #페이지가 열릴 때 까지 2초를 기다림.
                     book_list = self.driver.find_elements(by=By.XPATH, value="//div[@class='cover_area']/a")
                     # book_dates = self.driver.find_elements(by=By.XPATH, value='//div[@class="ss_book_list"]/ul')
-                    print(book_list)
                     if len(book_list) >0 :
                         # for url, book_date in zip(book_list, book_dates): 
                         for list in book_list:
-                            if self.driver.current_url is not page_url:
+                            if self.driver.current_url != page_url:
                                 self.driver.get(page_url)
+                            
                             # book list를 돌면서 url을 수집한뒤 getBookInfo에 보냄
+                            print(list)
                             url = list.get_attribute('href')
                             
                             # 현재 책의 출간 날짜를 구함.
