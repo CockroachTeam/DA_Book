@@ -17,16 +17,18 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchWindowException, TimeoutException
 
 
-def printProgress (iteration, total, prefix = '', suffix = '', decimals = 1, barLength = 100):
+def printProgress (iteration, total, name, page, end_num, prefix = '', suffix = '', decimals = 1, barLength = 100):
     # python progress bar
     # reference: https://tjjourney7.tistory.com/14
     # 약간 변형하여 사용
+
+    now_page = end_num - page + 1
 
     formatStr = "{0:." + str(decimals) + "f}"
     percent = formatStr.format(100 * (iteration / float(total)))
     filledLength = int(round(barLength * iteration / float(total)))
     bar = '#' * filledLength + '-' * (barLength - filledLength)
-    sys.stdout.write('\r    %s |%s| (%s/%s) %s%s %s' % (prefix, bar, iteration+1, total,percent, '%', suffix)),
+    sys.stdout.write('\r  [%s: (%d/%d)] %s |%s| (%s/%s) %s%s %s' % (name, now_page, end_num, prefix, bar, iteration+1, total,percent, '%', suffix)),
     if iteration == total:
         sys.stdout.write('\n')
     sys.stdout.flush()
@@ -103,7 +105,7 @@ class BookDBUpdater:
             
             diff = self.makeDiffMonth(2015, 1)
 
-            self.driver.get(f'https://www.aladin.co.kr/shop/wbrowse.aspx?BrowseTarget=List&ViewRowsCount=200&ViewType=Detail&PublishMonth={diff}&SortOrder=5&page=1&Stockstatus=1&CID={code}&SearchOption=&CustReviewRankStart=&CustReviewRankEnd=&CustReviewCountStart=&CustReviewCountEnd=&PriceFilterMin=&PriceFilterMax=')
+            self.driver.get(f'https://www.aladin.co.kr/shop/wbrowse.aspx?BrowseTarget=List&ViewRowsCount=100&ViewType=Detail&PublishMonth={diff}&SortOrder=5&page=1&Stockstatus=1&CID={code}&SearchOption=&CustReviewRankStart=&CustReviewRankEnd=&CustReviewCountStart=&CustReviewCountEnd=&PriceFilterMin=&PriceFilterMax=')
             
             # page_nation의 끝 번호를 구한다.
             end_num = self.driver.find_elements(by=By.XPATH, value='//div[@class="numbox_last"]/a')
@@ -116,15 +118,16 @@ class BookDBUpdater:
 
             for page in range(end_num,0, -1): #오래된 책 데이터부터 수집한다.
                 try:
-                    page_url = f'https://www.aladin.co.kr/shop/wbrowse.aspx?BrowseTarget=List&ViewRowsCount=200&ViewType=Detail&PublishMonth={diff}&SortOrder=5&page={page}&Stockstatus=1&CID={code}&SearchOption=&CustReviewRankStart=&CustReviewRankEnd=&CustReviewCountStart=&CustReviewCountEnd=&PriceFilterMin=&PriceFilterMax='
+                    page_url = f'https://www.aladin.co.kr/shop/wbrowse.aspx?BrowseTarget=List&ViewRowsCount=100&ViewType=Detail&PublishMonth={diff}&SortOrder=5&page={page}&Stockstatus=1&CID={code}&SearchOption=&CustReviewRankStart=&CustReviewRankEnd=&CustReviewCountStart=&CustReviewCountEnd=&PriceFilterMin=&PriceFilterMax='
                                  
                     self.driver.get(page_url)
-                    self.driver.implicitly_wait(10) #페이지가 열릴 때 까지 2초를 기다림.
+                    self.driver.implicitly_wait(3) #페이지가 열릴 때 까지 2초를 기다림.
                     book_list = self.driver.find_elements(by=By.XPATH, value="//div[@class='cover_area']/a")
                     book_urls = [list.get_attribute('href') for list in book_list]
                     # book_dates = self.driver.find_elements(by=By.XPATH, value='//div[@class="ss_book_list"]/ul')
                     if len(book_urls) >0 :
                         # for url, book_date in zip(book_list, book_dates): 
+                        i = 0
                         for url in book_urls:
                             # if self.driver.current_url != page_url:
                             #     self.driver.get(page_url)
@@ -140,7 +143,7 @@ class BookDBUpdater:
                             #     continue
 
                             info, intro = self.getBookInfo_aladin(url)
-                            print(info)
+                            # print(info)
                             if info is None:
                                 continue
                             info["aladin_url"] = url
@@ -150,11 +153,11 @@ class BookDBUpdater:
 
                             booksinfo = booksinfo.append(info)
                             booksintro = booksintro.append(intro)
-
-
                     
-                    #진행 사항을 보여주는 progress bar
-                    printProgress(page, end_num, 'Progress:', 'Complete', 1, 50)
+                            #진행 사항을 보여주는 progress bar
+                            printProgress(i, len(book_urls), name, page, end_num, 'Progress:', 'Complete', 1, len(book_urls))
+                            i += 1
+                            # printProgress(page, end_num, 'Progress:', 'Complete', 1, 50)
                 
                 
                 except TimeoutException:
