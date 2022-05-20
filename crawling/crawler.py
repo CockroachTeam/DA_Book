@@ -75,7 +75,7 @@ class BookDBUpdater:
 
     def getBookData(self): 
 
-        if os.path.exists('data/bookInfo.csv'): # bookinfo.csv라는 파일이 있으면 그 파일을 읽어온다
+        if os.path.exists('data/bookInfo.csv') and os.path.exists('data/bookIntro.csv'): # bookinfo.csv라는 파일이 있으면 그 파일을 읽어온다
             booksinfo = pd.read_csv('data/bookInfo.csv', sep="\t")
             booksintro = pd.read_csv('data/bookIntro.csv', sep="\t")
         else:
@@ -172,7 +172,7 @@ class BookDBUpdater:
                 self.driver = webdriver.Chrome(os.path.join(os.getcwd(), 'chromedriver.exe'), chrome_options=self.chrome_options)
         
                 booksinfo.to_csv('data/bookInfo.csv', mode='a', encoding='utf-8', index=False, sep="\t")
-                booksintro.to_csv('data/boonIntro.csv', mode='a', encoding='utf-8', index=False, sep="\t")
+                booksintro.to_csv('data/bookIntro.csv', mode='a', encoding='utf-8', index=False, sep="\t")
                 print('')
                 
                 
