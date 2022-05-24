@@ -10,9 +10,9 @@ import sys
 import os
 import re
 from datetime import datetime 
-import time
-import json
-import argparse
+# import time
+# import json
+# import argparse
 
 from bs4 import BeautifulSoup
 
@@ -377,21 +377,21 @@ class BookDBUpdater:
             # print("Here is Kyobo, => ", isbn)
             return None
 
-class ReviewUpdator():
-    def __init__():
-        pass
+# class ReviewUpdator():
+#     def __init__():
+#         pass
 
-    def getReviews(self):
-        # kyobo 리뷰 점수
-        kyobo_review_point = self.driver.find_elements(by=By.XPATH, value='//div[@class="popup_load"]/em')
-        dict["kyobo_review_point"] = float(kyobo_review_point[0].text) if kyobo_review_point else 0.0
+#     def getReviews(self):
+#         # kyobo 리뷰 점수
+#         kyobo_review_point = self.driver.find_elements(by=By.XPATH, value='//div[@class="popup_load"]/em')
+#         dict["kyobo_review_point"] = float(kyobo_review_point[0].text) if kyobo_review_point else 0.0
 
-        #kyobo review
-        # kyobo_review = 
+#         #kyobo review
+#         # kyobo_review = 
 
-        #aladin_review_point
-        aladin_review_point = self.driver.find_elements(by=By.XPATH, value='//*[@id="wa_product_top1_wa_Top_Ranking_pnlRanking"]/div[2]/a[2]')
-        dict["aladin_review_point"] = float(aladin_review_point[0].text) if aladin_review_point else 0.0
+#         #aladin_review_point
+#         aladin_review_point = self.driver.find_elements(by=By.XPATH, value='//*[@id="wa_product_top1_wa_Top_Ranking_pnlRanking"]/div[2]/a[2]')
+#         dict["aladin_review_point"] = float(aladin_review_point[0].text) if aladin_review_point else 0.0
 
 
 
