@@ -1,32 +1,35 @@
-# from django.shortcuts import render
-# from django.contrib.auth.models import User
-# from rest_framework import viewsets
-# from .serializers import PostSerializer, UserSerializer
-# from .models import Post
-# from rest_framework import permissions, mixins,generics
-# from rest_framework.pagination import PageNumberPagination
-
-# # 페이지 네이션 클래스 추가
-# class LargeResultsSetPagination(PageNumberPagination):
-#     page_size = 100
-#     page_size_query_param = 'page_size'
-#     max_page_size = 1000
-
-# class StandardResultsSetPagination(PageNumberPagination):
-#     page_size = 4
-#     page_size_query_param = 'page_size'
-#     max_page_size = 10
+from rest_framework.generics import ListCreateAPIView,RetrieveUpdateDestroyAPIView
+from api.pagination import CustomPageNumberPagination
+from api.serializers import TodoSerializer
+from rest_framework.permissions import IsAuthenticated
+from api.models import Todo
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
 
 
-# class PostView(viewsets.ModelViewSet):
-#     queryset = Post.objects.all()
-#     serializer_class = PostSerializer
-#     permission_classes = (permissions.IsAuthenticated,)
-#     pagination_class = StandardResultsSetPagination
-#     def perform_create(self, serializer):
-#         serializer.save(user=self.request.user)
+class TodosAPIView(ListCreateAPIView):
+    serializer_class = TodoSerializer
+    pagination_class = CustomPageNumberPagination
+    permission_classes = (IsAuthenticated,)
+    filter_backends=[DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter]
 
-# class UserView(viewsets.ReadOnlyModelViewSet):
-#     queryset = User.objects.all()
-#     serializer_class = UserSerializer
-#     pagination_class = StandardResultsSetPagination
+    filterset_fields = ['id','title','desc','is_complete']
+    search_fields = ['id','title','desc','is_complete']
+    ordering_fields = ['id','title','desc','is_complete']
+
+# 데이터 받아서 만들기 (POST)
+    def perform_create(self, serializer):
+        return serializer.save(owner = self.request.user)
+
+#리스트 보기 (GET)
+    def get_queryset(self):
+        return Todo.objects.filter(owner=self.request.user)
+
+#삭제 업데이트
+class TodoDetailAPIView(RetrieveUpdateDestroyAPIView):
+    serializer_class = TodoSerializer
+    permission_classes = (IsAuthenticated,)
+    lookup_field="id"
+
+    def get_queryset(self):
+        return Todo.objects.filter(owner=self.request.user)
