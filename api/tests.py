@@ -7,7 +7,7 @@ from api.models import Todo
 
 class TestListCreateTodos(APITestCase):
     
-    def create_todo():
+    def create_todo(self):
         sample_todo = {'title':"Hello","desc":"Test"}
         response = self.client.post(reverse('todos'),sample_todo)
 
