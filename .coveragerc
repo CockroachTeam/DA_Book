@@ -1,0 +1,8 @@
+[run]
+source=authentication/,api/,
+
+omit=
+    myvenv
+    */migrations/*
+    */tests/*
+    */__init__/*
