@@ -39,6 +39,7 @@ def printProgress (iteration, total, name, page, end_num, prefix = '', suffix = 
     bar = '#' * filledLength + '-' * (barLength - filledLength)
     sys.stdout.write('\r  [%s: (%d/%d)] %s |%s| (%s/%s) %s%s %s' % (name, now_page, end_num, prefix, bar, iteration+1, total, percent, '%', suffix)),
     if iteration == total:
+        
         sys.stdout.write('\n')
     sys.stdout.flush()
 
@@ -98,7 +99,7 @@ class BookDBUpdater:
             codes = codes.append({'code':li.attrs['href'].split('=')[1], 'name': li.text}, ignore_index=True)
         
         #save to csv
-        codes.to_csv('data/codes.csv', encoding='utf-8', index=False)
+        codes.to_csv('data/rest.csv', encoding='utf-8', index=False)
         self.driver.quit()
 
     def getBookData(self): 
